@@ -1,0 +1,52 @@
+name: Deploy to AWS lambda
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: /tmp
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        architecture: 'x64'
+
+    - name: Python version
+      run: python -c "import sys; print(sys.version)"
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        aws-region: ap-southeast-2
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Clone
+      run: git clone https://github.com/SoulH/dowell-back.git
+
+    - name: Pipenv
+      run: sudo pip3 install pipenv
+
+    - name: Install dependencies
+      run: cd dowell-back && pipenv install
+
+    - name: Install extra dependencies
+      run: cd dowell-back && pipenv run python -m spacy download en_core_web_sm
+
+    - name: Deploy
+      run: cd dowell-back && pipenv run zappa update production
